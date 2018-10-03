@@ -3,6 +3,8 @@ import xml.etree.ElementTree as ET
 import pandas as pd
 import numpy as np
 from io import StringIO
+from multiprocessing import Pool
+import multiprocessing as multi
 
 class Grid:
     def __init__(self,path,n,m):
@@ -15,14 +17,13 @@ class Grid:
         tree = ET.parse(file[0])
         self.root = tree.getroot()    
         df = pd.read_csv(StringIO(self.__findTupleList(self.root).text),header=None)
-        arr=np.array(df[1])
-        if df[1].size != 750*1125:
-            print(file,": Size is not ",750*1125,":",df[1].size)
+        arr=df[1]
+        if arr.size != 750*1125:
+            print(file,": Size is not ",750*1125,":",arr.size)
             #足りなかったら0埋め
-            arr=np.concatenate([np.array(df[1]),np.zeros(750*1125-df[1].size)])
-        else:
-            arr=np.array(df[1])
-        self.tupleList  = np.reshape(arr,(750,-1))
+            arr=np.concatenate([arr,np.zeros(750*1125-arr.size)])
+       
+        self.tupleList = np.reshape(arr,(750,-1))
     def __findTupleList(self,root):
         for item in root.iter():
             if "tupleList" in item.tag:
@@ -46,15 +47,15 @@ class Mesh:
         
     def __generateFolderName(self,n):
         return 'FG-GML-{}-{:02}-DEM10B'.format(n//100,n%100)
-    
+def process(arg):
+    return Mesh(arg[0],arg[1]).tupleList   
 class Map:
     def __init__(self,folder,nums):
         h = len(nums)
         w = len(nums[0])
         a=[]
+        p = Pool(multi.cpu_count())
         for i in range(h):
-            b=[]
-            for j in range(w):
-                b.append(Mesh(folder,nums[i][j]).tupleList)
-            a.append(b)
+            b=p.map(process, list(map(lambda x: [folder,x] ,nums[i])))
+            a.append(b)      
         self.tupleList=np.block(a)
