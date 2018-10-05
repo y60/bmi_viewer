@@ -35,8 +35,17 @@ int load_csv(char* file,int* array){
     ifstream ifs(file);
     string buf;
     int i=0;
+    int br;
     while (getline(ifs, buf,',')) {
+        br=buf.find('\n');
+        if(br==string::npos){
         array[i]=(int)(stof(buf)*10);
+        }else{
+            array[i]=(int)(stof(buf.substr(0,br))*10);
+        i++;
+            if(br==buf.size()-1)return i;
+            array[i]=(int)(stof(buf.substr(br+1))*10);
+    }
         i++;
     }
     return i-1;
