@@ -6,8 +6,8 @@
 #include <GL/glut.h>
 using namespace std;
 
-#define WINDOW_X (500)
-#define WINDOW_Y (500)
+#define WINDOW_X (900)
+#define WINDOW_Y (600)
 #define WINDOW_NAME "Viewer"
 
 int load_csv(char* file);
@@ -148,12 +148,12 @@ void set_callback_functions(){
 void glut_display(){
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    gluPerspective(30.0, 1.0, 0.1, 10000);
+    gluPerspective(30.0, 1.5, 0.1, 10000);
 
 
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-    gluLookAt(w/2,h/2,4000,
+    gluLookAt(w/2,h/2,2000,
                 w/2,h/2,0,
                 0,1,0);
     
