@@ -17,11 +17,13 @@ void draw_map();
 void glut_display();
 void prepare_polygon();
 void closs(float* x1,float* x2,float* y1,float* y2, float* closs);//x2-x1とy2-y1の外積を計算して正規化してclossに入れる
+void culculateColor(float* p,float* color);
 
 int w,h;
 GLfloat* csv_data;
 GLuint* indices;
 GLfloat* normals;
+GLfloat* colors;
 
 int main(int argc, char* argv[]){
     //読み込み
@@ -58,14 +60,12 @@ int load_csv(char* file){
             csv_data[i+1]=h-y;
             csv_data[i+2]=(stof(buf.substr(0,br))/10);
             i+=3;
-            if(y<3)printf("%d,%d\n",x,y);
             if(br==buf.size()-1)return i;
             x=0;
             y++;
             csv_data[i]=x;
             csv_data[i+1]=h-y;
             csv_data[i+2]=(stof(buf.substr(br+1))/10);
-            if(y<3)printf("%f,%f\n",csv_data[i-1],csv_data[i+2]);
         }
         x++;
         i+=3;
@@ -82,30 +82,35 @@ void init_GL(int argc, char *argv[]){
 
 void prepare_polygon(){
     indices = (GLuint *)malloc(sizeof(GLuint)*(w-1)*(h-1)*4);
-    normals = (GLfloat *)malloc(sizeof(GLfloat)*(w-1)*(h-1)*3);
+    normals = (GLfloat *)malloc(sizeof(GLfloat)*w*h*3);
+    colors = (GLfloat *)malloc(sizeof(GLfloat)*w*h*3);
     int i,j;
     GLuint* p = indices;
-    GLfloat* q = normals;
     int temp=0;
-    float *p0,*p1,*p2,*p3;
     for(i=0;i<h-1;i++){
         for(j=0;j<w-1;j++){
-            p0=csv_data+temp*3;
-            p1=p0+3;
-            p2=p1+w*3;
-            p3=p0+w*3;
             p[0]=temp;
             p[1]=temp+1;
             p[2]=temp+w+1;
             p[3]=temp+w;
-            closs(p0,p1,p0,p3,q);
-            p+=4;
-            q+=3;
             temp++;
+            p+=4;
         }
         temp++;
     }
-    printf("indices prepared.%d%d%d%d\n",indices[0],indices[1],indices[2],indices[3]);
+    GLfloat* p0 = csv_data;
+    GLfloat* q = normals;
+    GLfloat* c = colors;
+    for(i=0;i<h;i++){
+        for(j=0;j<w;j++){
+            culculateColor(p0,c);
+            closs(p0, j<w-1?p0+3:p0-3, p0, i<h-1?p0+w*3:p0-w*3,q);
+            p0+=3;
+            c+=3;
+            q+=3;
+        }
+    }
+    printf("indices prepared.\n");
 }
 
 void substract(float* x,float* y,float* result){//x-y
@@ -130,6 +135,12 @@ void closs(float* x1,float* x2,float* y1,float* y2, float* closs){
     closs[2]/=r;
 }
 
+void culculateColor(float* p,float* color){
+    color[0]=1;
+    color[1]=1;
+    color[2]=1;
+}
+
 void set_callback_functions(){
     glutDisplayFunc(glut_display);
 }
@@ -150,7 +161,7 @@ void glut_display(){
 
     GLfloat diffuse[] = {1.0, 1.0, 1.0, 1.0};
     GLfloat ambient[] = {1.0, 1.0, 1.0, 1.0};
-
+   
     glEnable(GL_LIGHTING);
     glEnable(GL_LIGHT0);
 
@@ -171,10 +182,13 @@ void glut_display(){
 void draw_map(){
     glEnableClientState(GL_VERTEX_ARRAY);
     glEnableClientState(GL_NORMAL_ARRAY);
+     glEnableClientState(GL_COLOR_ARRAY);
     glVertexPointer(3,GL_FLOAT,0,csv_data);
+     glColorPointer(3,GL_FLOAT,0,colors);
     glNormalPointer(GL_FLOAT,0,normals);
     glDrawElements(GL_QUADS,(w-1)*(h-1)*4,GL_UNSIGNED_INT,indices);
     glDisableClientState(GL_NORMAL_ARRAY);
     glDisableClientState(GL_VERTEX_ARRAY);
+    glDisableClientState(GL_COLOR_ARRAY);
     printf("rendered.\n");
 }
