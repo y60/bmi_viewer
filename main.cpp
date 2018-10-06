@@ -9,7 +9,7 @@ using namespace std;
 #define WINDOW_Y (500)
 #define WINDOW_NAME "Viewer"
 
-int load_csv(char* file,int* array);
+int load_csv(char* file);
 void init_GL(int argc, char *argv[]);
 void set_callback_functions();
 void draw_map();
@@ -17,15 +17,15 @@ void glut_display();
 void prepare_polygon();
 
 int w,h;
-int* csv_data;
+GLfloat* csv_data;
 GLint* pol_data;
+GLuint* indices;
 
 int main(int argc, char* argv[]){
     //読み込み
     h=stoi(argv[2]);
     w=stoi(argv[3]);
-    csv_data = (int *)malloc(sizeof(int)*w*h);
-    int size = load_csv(argv[1],csv_data);
+    int size = load_csv(argv[1]);
     printf("%d*%d map %s loaded.\n",w,h,argv[1]);
 
     init_GL(argc,argv);
@@ -35,22 +35,35 @@ int main(int argc, char* argv[]){
     glutMainLoop();
 }
 
-int load_csv(char* file,int* array){
+int load_csv(char* file){
+    csv_data = (float *)malloc(sizeof(float)*w*h*3);
+
     ifstream ifs(file);
     string buf;
     int i=0;
     int br;
+    int x=0;
+    int y=0;
     while (getline(ifs, buf,',')) {
         br=buf.find('\n');
         if(br==string::npos){
-            array[i]=(int)(stof(buf)*10);
+            csv_data[i]=x;
+            csv_data[i+1]=y;
+            csv_data[i+2]=(stof(buf)/10);
+            x++;
         }else{
-            array[i]=(int)(stof(buf.substr(0,br))*10);
-            i++;
+            csv_data[i]=x;
+            csv_data[i+1]=y;
+            csv_data[i+2]=(stof(buf.substr(0,br))/10);
+            i+=3;
             if(br==buf.size()-1)return i;
-            array[i]=(int)(stof(buf.substr(br+1))*10);
+            x=0;
+            y++;
+            csv_data[i]=x;
+            csv_data[i+1]=y;
+            csv_data[i+2]=(stof(buf.substr(br+1))/10);
         }
-        i++;
+        i+=3;
     }
     return i-1;
 }
@@ -63,32 +76,22 @@ void init_GL(int argc, char *argv[]){
 }
 
 void prepare_polygon(){
-    glEnableClientState(GL_VERTEX_ARRAY);
-    
-    pol_data = (GLint *)malloc(sizeof(GLint)*(w-1)*(h-1)*4*3);
+    indices = (GLuint *)malloc(sizeof(GLuint)*(w-1)*(h-1)*4);
     int i,j;
-    GLint* p = pol_data;
-    int* q = csv_data;
+    GLuint* p = indices;
+    int temp=0;
     for(i=0;i<h-1;i++){
         for(j=0;j<w-1;j++){
-            p[0]=j;
-            p[1]=h-i;
-            p[2]=q[0];
-            p[3]=j+1;
-            p[4]=h-i;
-            p[5]=q[1];
-            p[6]=j+1;
-            p[7]=h-(i+1);
-            p[8]=q[w+1];
-            p[9]=j;
-            p[10]=h-(i+1);
-            p[11]=q[w];
-            p+=12;
-            q+=1;
+            p[0]=temp;
+            p[1]=temp+1;
+            p[2]=temp+w+1;
+            p[3]=temp+w;
+            p+=4;
+            temp++;
         }
-        q+=1;
+        temp++;
     }
-    printf("pol_data prepared.\n");
+    printf("indices prepared.%d%d%d%d\n",indices[0],indices[1],indices[2],indices[3]);
 }
 
 void set_callback_functions(){
@@ -107,7 +110,7 @@ void glut_display(){
                 w/2,h/2,0,
                 0,1,0);
     
-    GLfloat lightpos[] = {w,h,1000,1.0};
+    GLfloat lightpos[] = {(float)w,(float)h,400,1.0};
 
     GLfloat diffuse[] = {1.0, 1.0, 1.0, 1.0};
 
@@ -128,17 +131,9 @@ void glut_display(){
 }
 
 void draw_map(){
-     glVertexPointer(3,GL_INT,0,pol_data);
-    for(int i = 0;i<(w-1)*(h-1);i++){
-         glDrawArrays(GL_POLYGON,i*4,4);
-     }
-    glBegin(GL_POLYGON);
-    double p0[]={1,1,30};
-    double p1[]={1,0,30};
-    double p2[]={0,0,30};
-    glVertex3dv(p0);
-    glVertex3dv(p1);
-    glVertex3dv(p2);
-    glEnd();
+    glEnableClientState(GL_VERTEX_ARRAY);
+    glVertexPointer(3,GL_FLOAT,0,csv_data);
+    glDrawElements(GL_QUADS,(w-1)*(h-1)*4,GL_UNSIGNED_INT,indices);
+    glDisableClientState(GL_VERTEX_ARRAY);
     printf("rendered.\n");
 }
