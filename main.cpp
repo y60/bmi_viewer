@@ -15,10 +15,15 @@ void init_GL(int argc, char *argv[]);
 void set_callback_functions();
 void draw_map();
 void glut_display();
+void glut_keyboard(unsigned char key, int x, int y);
 void prepare_polygon();
 void closs(float* x1,float* x2,float* y1,float* y2, float* closs);//x2-x1とy2-y1の外積を計算して正規化してclossに入れる
 void culculateColor(float* p,float* color);
+void glut_motion(int x,int y);
 
+
+double g_angle1 = 0.0;
+double g_angle2 = -3.141592 / 6;
 int w,h;
 GLfloat* csv_data;
 GLuint* indices;
@@ -143,6 +148,33 @@ void culculateColor(float* p,float* color){
 
 void set_callback_functions(){
     glutDisplayFunc(glut_display);
+    glutKeyboardFunc(glut_keyboard);
+    glutMotionFunc(glut_motion);
+}
+
+float angle=0;
+
+void glut_keyboard(unsigned char key, int x, int y){
+    switch(key){
+        case 'q':
+            exit(0);
+        break;
+        case 'g':
+            angle+=0.1;
+        break;
+    }
+    glutPostRedisplay();
+}
+
+void glut_motion(int x, int y){
+    static int px = -1, py = -1;
+    if(px >= 0 && py >= 0){
+        g_angle1 += (double)-(x - px)/20;
+        g_angle2 += (double)(y - py)/20;
+    }
+    px = x;
+    py = y;
+    glutPostRedisplay();
 }
 
 void glut_display(){
@@ -153,11 +185,16 @@ void glut_display(){
 
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-    gluLookAt(w/2,h/2,2000,
-                w/2,h/2,0,
-                0,1,0);
+     gluLookAt(w/2,h/2,csv_data[(h/2*w+w/2)*3+2]*1.3,
+            w/2+h * sin(g_angle1), 
+	        h/2+h * cos(g_angle1),
+	        0, 
+            0.0, 0.0, 1.0);
+    // gluLookAt(w/2,h/2,h*3,
+    //             w/2,h/2,0,
+    //             0,1,0);
     
-    GLfloat lightpos[] = {(float)w,(float)h,400,1.0};
+    GLfloat lightpos[] = {((float)w/2)*(1-cos(angle)),((float)h)*(1-sin(angle)),400,1.0};
 
     GLfloat diffuse[] = {1.0, 1.0, 1.0, 1.0};
     GLfloat ambient[] = {1.0, 1.0, 1.0, 1.0};
@@ -182,9 +219,9 @@ void glut_display(){
 void draw_map(){
     glEnableClientState(GL_VERTEX_ARRAY);
     glEnableClientState(GL_NORMAL_ARRAY);
-     glEnableClientState(GL_COLOR_ARRAY);
+    glEnableClientState(GL_COLOR_ARRAY);
     glVertexPointer(3,GL_FLOAT,0,csv_data);
-     glColorPointer(3,GL_FLOAT,0,colors);
+    glColorPointer(3,GL_FLOAT,0,colors);
     glNormalPointer(GL_FLOAT,0,normals);
     glDrawElements(GL_QUADS,(w-1)*(h-1)*4,GL_UNSIGNED_INT,indices);
     glDisableClientState(GL_NORMAL_ARRAY);
