@@ -20,9 +20,15 @@ void prepare_polygon();
 void closs(float* x1,float* x2,float* y1,float* y2, float* closs);//x2-x1とy2-y1の外積を計算して正規化してclossに入れる
 void culculateColor(float* p,float* color);
 void glut_motion(int x,int y);
-
+void draw_sky();
+GLfloat green_dif[] ={88.0/255,181.0/255,64/255,1.0};
+GLfloat green_amb[] ={30.0/255,33.0/255,19.0/255,1.0};
 
 double g_angle1 = 0.0;
+double g_angle3 = 0.0;//視点の向き
+double pos_x;
+double pos_y;
+double v=3.0;
 double g_angle2 = -3.141592 / 6;
 int w,h;
 GLfloat* csv_data;
@@ -35,6 +41,8 @@ int main(int argc, char* argv[]){
     h=stoi(argv[2]);
     w=stoi(argv[3]);
     int size = load_csv(argv[1]);
+    pos_x=w/2;
+    pos_y=h/2;
     printf("%d*%d map %s loaded.\n",w,h,argv[1]);
 
     init_GL(argc,argv);
@@ -141,9 +149,9 @@ void closs(float* x1,float* x2,float* y1,float* y2, float* closs){
 }
 
 void culculateColor(float* p,float* color){
-    color[0]=1;
+    color[0]=0;
     color[1]=1;
-    color[2]=1;
+    color[2]=0;
 }
 
 void set_callback_functions(){
@@ -161,6 +169,20 @@ void glut_keyboard(unsigned char key, int x, int y){
         break;
         case 'g':
             angle+=0.1;
+        break;
+        case 'a'://左
+            g_angle3-=0.03;
+        break;
+        case 'f'://右
+            g_angle3+=0.03;
+        break;
+        case 'e'://全進
+            pos_x+= v*sin(g_angle3); 
+	        pos_y+= v*cos(g_angle3);
+        break;
+        case 'x'://後退
+            pos_x-= v*sin(g_angle3); 
+	        pos_y-= v*cos(g_angle3);
         break;
     }
     glutPostRedisplay();
@@ -185,32 +207,32 @@ void glut_display(){
 
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-     gluLookAt(w/2,h/2,csv_data[(h/2*w+w/2)*3+2]*1.3,
-            w/2+h * sin(g_angle1), 
-	        h/2+h * cos(g_angle1),
+     gluLookAt(pos_x,pos_y,csv_data[(h/2*w+w/2)*3+2]*1.3,
+            pos_x+h * sin(g_angle3), 
+	        pos_y+h * cos(g_angle3),
 	        0, 
             0.0, 0.0, 1.0);
     // gluLookAt(w/2,h/2,h*3,
     //             w/2,h/2,0,
     //             0,1,0);
     
-    GLfloat lightpos[] = {((float)w/2)*(1-cos(angle)),((float)h)*(1-sin(angle)),400,1.0};
+    GLfloat lightpos[] = {((float)w/2)*(1-cos(angle)),((float)h)*(1-sin(angle)),1000,1.0};
 
     GLfloat diffuse[] = {1.0, 1.0, 1.0, 1.0};
     GLfloat ambient[] = {1.0, 1.0, 1.0, 1.0};
-   
+    glClearColor(63.0/255,166.0/255,250.0/255,1.0);
+    glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
     glEnable(GL_LIGHTING);
     glEnable(GL_LIGHT0);
-
+    glEnable(GL_DEPTH_TEST);
     glLightfv(GL_LIGHT0,GL_POSITION,lightpos);
     glLightfv(GL_LIGHT0,GL_DIFFUSE,diffuse);
     glLightfv(GL_LIGHT0,GL_AMBIENT,ambient);
-
-
-    glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-    glEnable(GL_DEPTH_TEST);
     draw_map();
+
     glFlush();
+    glDisable(GL_LIGHT0);
+    glDisable(GL_LIGHTING);
     glDisable(GL_DEPTH_TEST);
     
     glutSwapBuffers();
@@ -221,7 +243,8 @@ void draw_map(){
     glEnableClientState(GL_NORMAL_ARRAY);
     glEnableClientState(GL_COLOR_ARRAY);
     glVertexPointer(3,GL_FLOAT,0,csv_data);
-    glColorPointer(3,GL_FLOAT,0,colors);
+    glMaterialfv(GL_FRONT,GL_DIFFUSE,green_dif);
+    glMaterialfv(GL_FRONT,GL_AMBIENT,green_amb);
     glNormalPointer(GL_FLOAT,0,normals);
     glDrawElements(GL_QUADS,(w-1)*(h-1)*4,GL_UNSIGNED_INT,indices);
     glDisableClientState(GL_NORMAL_ARRAY);
