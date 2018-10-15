@@ -16,6 +16,7 @@ class Grid:
             return
         tree = ET.parse(file[0])
         self.root = tree.getroot()    
+        self.topLeftLatLong=self.__findLatLong(self.root)
         df = pd.read_csv(StringIO(self.__findTupleList(self.root).text),header=None)
         arr=df[1]
         if arr.size != 750*1125:
@@ -25,8 +26,15 @@ class Grid:
        
         self.tupleList = np.reshape(arr,(750,-1))
     def __findTupleList(self,root):
+        return self.__findByTag(root,'tupleList')
+    def __findLatLong(self,root):
+        temp=self.__findByTag(root,'Envelope')
+        lowerCorner=self.__findByTag(temp,"lowerCorner").text
+        upperCorner=self.__findByTag(temp,"upperCorner").text
+        return [ float(lowerCorner.split(' ')[1]),float(upperCorner.split(' ')[0])]
+    def __findByTag(self,root,tag):
         for item in root.iter():
-            if "tupleList" in item.tag:
+            if tag in item.tag:
                 return item
         return None
     def __generateFileName(self,n,m):
