@@ -11,6 +11,7 @@ using namespace std;
 #define WINDOW_NAME "Viewer"
 
 int load_csv(char* file);
+void load_gsx_csv(char* file);
 void init_GL(int argc, char *argv[]);
 void set_callback_functions();
 void draw_map();
@@ -21,9 +22,14 @@ void closs(float* x1,float* x2,float* y1,float* y2, float* closs);//x2-x1とy2-y
 void culculateColor(float* p,float* color);
 void glut_motion(int x,int y);
 void draw_sky();
+void draw_gsx();
 GLfloat green_dif[] ={88.0/255,181.0/255,64/255,1.0};
 GLfloat green_amb[] ={30.0/255,33.0/255,19.0/255,1.0};
+GLfloat red_line[] ={1,0,0,1.0};
 
+int gsx_size;
+double lat;
+double lon;
 double g_angle1 = 0.0;
 double g_angle3 = 0.0;//視点の向き
 double pos_x;
@@ -31,6 +37,7 @@ double pos_y;
 double v=3.0;
 double g_angle2 = -3.141592 / 6;
 int w,h;
+GLfloat* gsx_data;
 GLfloat* csv_data;
 GLuint* indices;
 GLfloat* normals;
@@ -41,6 +48,7 @@ int main(int argc, char* argv[]){
     h=stoi(argv[2]);
     w=stoi(argv[3]);
     int size = load_csv(argv[1]);
+    load_gsx_csv(argv[4]);
     pos_x=w/2;
     pos_y=h/2;
     printf("%d*%d map %s loaded.\n",w,h,argv[1]);
@@ -49,6 +57,8 @@ int main(int argc, char* argv[]){
 
     prepare_polygon();
     set_callback_functions();
+    glNormalPointer(GL_FLOAT,0,normals);
+    glVertexPointer(3,GL_FLOAT,0,csv_data);
     glutMainLoop();
 }
 
@@ -57,6 +67,11 @@ int load_csv(char* file){
 
     ifstream ifs(file);
     string buf;
+    getline(ifs, buf,',');
+    lon=stof(buf);
+    getline(ifs, buf,'\n');
+    lat=stof(buf);
+    printf("%f,%f\n",lat,lon);
     int i=0;
     int br;
     int x=0;
@@ -84,6 +99,33 @@ int load_csv(char* file){
         i+=3;
     }
     return i-1;
+}
+
+void load_gsx_csv(char* file){
+    ifstream ifs(file);
+    string buf;
+    getline(ifs, buf);
+    gsx_size=stoi(buf);
+    printf("gsx count:%d\n",gsx_size);
+    gsx_data = (float *)malloc(sizeof(float)*gsx_size*3);
+    float *p=gsx_data;
+    int count=0;
+    while (getline(ifs, buf,',')&&count<gsx_size) {
+        float mlat=stof(buf);
+        getline(ifs, buf,',');
+        float mlon=stof(buf);
+        getline(ifs, buf,'\n');
+        p[1]=-(mlat-lat)*9000;
+        p[0]=(mlon-lon)*9000;
+         p[2]=csv_data[(w*((int)p[1])+(int)p[0])*3+2];
+         p[1]=h-p[1];
+        // printf("%f,%f,%f",p[0],p[1],p[2]);
+        p+=3;
+        count++;
+    }
+    pos_x=gsx_data[0];
+    pos_y=gsx_data[1];
+    printf("gsx loaded.\n");
 }
 
 void init_GL(int argc, char *argv[]){
@@ -207,7 +249,7 @@ void glut_display(){
 
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-     gluLookAt(pos_x,pos_y,csv_data[(h/2*w+w/2)*3+2]*1.3,
+     gluLookAt(pos_x,pos_y,csv_data[(h/2*w+w/2)*3+2]*1.6,
             pos_x+h * sin(g_angle3), 
 	        pos_y+h * cos(g_angle3),
 	        0, 
@@ -229,7 +271,7 @@ void glut_display(){
     glLightfv(GL_LIGHT0,GL_DIFFUSE,diffuse);
     glLightfv(GL_LIGHT0,GL_AMBIENT,ambient);
     draw_map();
-
+    draw_gsx();
     glFlush();
     glDisable(GL_LIGHT0);
     glDisable(GL_LIGHTING);
@@ -242,13 +284,21 @@ void draw_map(){
     glEnableClientState(GL_VERTEX_ARRAY);
     glEnableClientState(GL_NORMAL_ARRAY);
     glEnableClientState(GL_COLOR_ARRAY);
-    glVertexPointer(3,GL_FLOAT,0,csv_data);
     glMaterialfv(GL_FRONT,GL_DIFFUSE,green_dif);
     glMaterialfv(GL_FRONT,GL_AMBIENT,green_amb);
-    glNormalPointer(GL_FLOAT,0,normals);
     glDrawElements(GL_QUADS,(w-1)*(h-1)*4,GL_UNSIGNED_INT,indices);
     glDisableClientState(GL_NORMAL_ARRAY);
     glDisableClientState(GL_VERTEX_ARRAY);
     glDisableClientState(GL_COLOR_ARRAY);
     printf("rendered.\n");
+}
+void draw_gsx(){
+    glMaterialfv(GL_FRONT,GL_DIFFUSE,red_line);
+    glBegin(GL_LINE_LOOP);
+    float *p=gsx_data;
+    for(int i=0;i<gsx_size;i++){
+        glVertex3d(p[0],p[1],p[2]+1.0);
+        p+=3;
+    }
+    glEnd();
 }
