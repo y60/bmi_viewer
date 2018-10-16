@@ -25,6 +25,7 @@ void draw_sky();
 void draw_gsx();
 void draw_polls();
 void draw_poll(float* x,float* color);
+void convertLatLon(float lat, float lon, float* xyz);
 GLfloat green_dif[] ={88.0/255,181.0/255,64/255,1.0};
 GLfloat green_amb[] ={30.0/255,33.0/255,19.0/255,1.0};
 GLfloat red_line[] ={1,0,0,1.0};
@@ -118,11 +119,7 @@ void load_gsx_csv(char* file){
         getline(ifs, buf,',');
         float mlon=stof(buf);
         getline(ifs, buf,'\n');
-        p[1]=-(mlat-lat)*9000;
-        p[0]=(mlon-lon)*9000;
-         p[2]=csv_data[(w*((int)p[1])+(int)p[0])*3+2];
-         p[1]=h-p[1];
-        // printf("%f,%f,%f",p[0],p[1],p[2]);
+        convertLatLon(mlat,mlon,p);
         p+=3;
         count++;
     }
@@ -130,6 +127,12 @@ void load_gsx_csv(char* file){
     pos_y=gsx_data[1];
     pos_z=gsx_data[2]+100;
     printf("gsx loaded.\n");
+}
+void convertLatLon(float mlat, float mlon, float* xyz){
+    xyz[0]=(mlon-lon)*9000;
+    xyz[1]=-(mlat-lat)*9000;
+    xyz[2]=csv_data[(w*((int)xyz[1])+(int)xyz[0])*3+2];
+    xyz[1]=h-xyz[1];
 }
 
 void init_GL(int argc, char *argv[]){
