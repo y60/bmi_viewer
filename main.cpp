@@ -23,6 +23,8 @@ void culculateColor(float* p,float* color);
 void glut_motion(int x,int y);
 void draw_sky();
 void draw_gsx();
+void draw_polls();
+void draw_poll(float* x,float* color);
 GLfloat green_dif[] ={88.0/255,181.0/255,64/255,1.0};
 GLfloat green_amb[] ={30.0/255,33.0/255,19.0/255,1.0};
 GLfloat red_line[] ={1,0,0,1.0};
@@ -34,6 +36,7 @@ double g_angle1 = 0.0;
 double g_angle3 = 0.0;//視点の向き
 double pos_x;
 double pos_y;
+double pos_z=0;
 double v=3.0;
 double g_angle2 = -3.141592 / 6;
 int w,h;
@@ -125,6 +128,7 @@ void load_gsx_csv(char* file){
     }
     pos_x=gsx_data[0];
     pos_y=gsx_data[1];
+    pos_z=gsx_data[2]+100;
     printf("gsx loaded.\n");
 }
 
@@ -235,6 +239,7 @@ void glut_motion(int x, int y){
     if(px >= 0 && py >= 0){
         g_angle1 += (double)-(x - px)/20;
         g_angle2 += (double)(y - py)/20;
+        pos_z += (double)(y - py);
     }
     px = x;
     py = y;
@@ -249,7 +254,7 @@ void glut_display(){
 
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-     gluLookAt(pos_x,pos_y,csv_data[(h/2*w+w/2)*3+2]*1.6,
+    gluLookAt(pos_x,pos_y,pos_z,
             pos_x+h * sin(g_angle3), 
 	        pos_y+h * cos(g_angle3),
 	        0, 
@@ -272,6 +277,7 @@ void glut_display(){
     glLightfv(GL_LIGHT0,GL_AMBIENT,ambient);
     draw_map();
     draw_gsx();
+    draw_polls();
     glFlush();
     glDisable(GL_LIGHT0);
     glDisable(GL_LIGHTING);
@@ -294,7 +300,7 @@ void draw_map(){
 }
 void draw_gsx(){
     glMaterialfv(GL_FRONT,GL_DIFFUSE,red_line);
-    glBegin(GL_LINE_LOOP);
+    glBegin(GL_LINE_STRIP);
     float *p=gsx_data;
     for(int i=0;i<gsx_size;i++){
         glVertex3d(p[0],p[1],p[2]+1.0);
@@ -302,3 +308,17 @@ void draw_gsx(){
     }
     glEnd();
 }
+
+void draw_polls(){
+    draw_poll(gsx_data,red_line);
+    draw_poll(gsx_data+(gsx_size-1)*3,red_line);
+}
+void draw_poll(float* x,float* color){
+    glMaterialfv(GL_FRONT,GL_DIFFUSE,color);
+    glBegin(GL_LINE_STRIP);
+    
+    glVertex3d(x[0],x[1],x[2]);
+    glVertex3d(x[0],x[1],pos_z+10);
+
+    glEnd();
+} 
