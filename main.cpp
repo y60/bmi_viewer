@@ -167,7 +167,7 @@ void load_poll_csv(char* file){
     string buf;
     getline(ifs, buf);
     poll_size=stoi(buf);
-    printf("poll count:%d\n",poll_size);
+    printf("pole count:%d\n",poll_size);
     poll_data = (float *)malloc(sizeof(float)*poll_size*3);
     poll_name_data = (string *)malloc(sizeof(string)*poll_size);
     float *p=poll_data;
@@ -178,7 +178,6 @@ void load_poll_csv(char* file){
         getline(ifs, buf,',');
         float mlon=stof(buf);
         getline(ifs, buf,'\n');
-        printf("%s\n",temp);
         buf.copy(temp,buf.size());
         poll_name_data[count]=string(temp,buf.size());
         convertLatLon(mlat,mlon,p);
@@ -186,7 +185,7 @@ void load_poll_csv(char* file){
         count++;
     }
     free(temp);
-    printf("poll loaded.\n");
+    printf("poles loaded.\n");
 }
 
 void convertLatLon(float mlat, float mlon, float* xyz){
