@@ -88,25 +88,30 @@ int load_csv(char* file){
     while (getline(ifs, buf,',')) {
         br=buf.find('\n');
         if(br==string::npos){
+            if(x<w&&y<h){
             csv_data[i]=x;
             csv_data[i+1]=h-y;
             csv_data[i+2]=(stof(buf)/10);
-            
+                i+=3;
+            }
         }else{
+            if(x<w&&y<h){
             csv_data[i]=x;
             csv_data[i+1]=h-y;
             csv_data[i+2]=(stof(buf.substr(0,br))/10);
             i+=3;
+            }
             if(br==buf.size()-1)return i;
             x=0;
             y++;
             csv_data[i]=x;
             csv_data[i+1]=h-y;
             csv_data[i+2]=(stof(buf.substr(br+1))/10);
+            i+=3;
         }
         x++;
-        i+=3;
     }
+    printf("csv loaded.");
     return i-1;
 }
 
