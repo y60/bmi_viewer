@@ -12,6 +12,8 @@ using namespace std;
 #define MODE_DEFAULT 0
 #define MODE_WALK_AROUND 1
 #define MODE_REPLAY 2
+#define INDICE_NUM 6
+#define MESH_NUM 120
 
 int load_csv(char* file);
 void load_gsx_csv(char* file);
@@ -54,14 +56,13 @@ GLfloat* gsx_data;
 GLfloat* csv_data;
 GLfloat* poll_data;
 string* poll_name_data;
-GLuint* indices;
+GLuint* indices[INDICE_NUM];
 GLfloat* normals;
-GLfloat* colors;
 
 int main(int argc, char* argv[]){
     //読み込み
-    h=stoi(argv[2]);
-    w=stoi(argv[3]);
+    h=stoi(argv[2])/MESH_NUM*MESH_NUM+1;
+    w=stoi(argv[3])/MESH_NUM*MESH_NUM+1;
     int size = load_csv(argv[1]);
     load_gsx_csv(argv[4]);
     load_poll_csv(argv[5]);
@@ -108,7 +109,12 @@ int load_csv(char* file){
                 csv_data[i+2]=(stof(buf.substr(0,br))/10);
                 i+=3;
             }
-            if(br==buf.size()-1)return i;
+            if(br==buf.size()-1){
+                printf("csv loaded.\n");
+                return i;
+            }else if(y==h-1){
+                return i;
+            }
             x=0;
             y++;
             csv_data[i]=x;
@@ -118,7 +124,7 @@ int load_csv(char* file){
         }
         x++;
     }
-    printf("csv loaded.");
+    printf("csv loaded.\n");
     return i-1;
 }
 
@@ -198,32 +204,36 @@ void init_GL(int argc, char *argv[]){
 }
 
 void prepare_polygon(){
-    indices = (GLuint *)malloc(sizeof(GLuint)*(w-1)*(h-1)*4);
     normals = (GLfloat *)malloc(sizeof(GLfloat)*w*h*3);
-    colors = (GLfloat *)malloc(sizeof(GLfloat)*w*h*3);
-    int i,j;
-    GLuint* p = indices;
-    int temp=0;
-    for(i=0;i<h-1;i++){
-        for(j=0;j<w-1;j++){
-            p[0]=temp;
-            p[1]=temp+1;
-            p[2]=temp+w+1;
-            p[3]=temp+w;
-            temp++;
-            p+=4;
+    for(int d=1;d<=INDICE_NUM;d++){
+        indices[d-1] = (GLuint *)malloc(sizeof(GLuint)*(w-1)*(h-1)*4/(d*d));
+        int i,j,k,m;
+        GLuint* p = indices[d-1];
+        int temp=0;
+        int leftup=0;
+        for(k=0;k<w/MESH_NUM;k++){//(k,m)のメッシュ
+            for(m=0;m<h/MESH_NUM;m++){
+                leftup = (w*m+k)*MESH_NUM;
+                for(i=0;i<MESH_NUM;i+=d){
+                    for(j=0;j<MESH_NUM;j+=d){
+                        temp=leftup+w*j+i;//(k*MESH_NUM+i,m*MESH_NUM+j)
+                        p[0]=temp;
+                        p[1]=temp+1*d;
+                        p[2]=temp+(w+1)*d;
+                        p[3]=temp+w*d;
+                        p+=4;
+                    }
+                }
+            }
         }
-        temp++;
     }
-    GLfloat* p0 = csv_data;
+   GLfloat* p0 = csv_data;
     GLfloat* q = normals;
-    GLfloat* c = colors;
+    int i,j;
     for(i=0;i<h;i++){
         for(j=0;j<w;j++){
-            culculateColor(p0,c);
             closs(p0, j<w-1?p0+3:p0-3, p0, i<h-1?p0+w*3:p0-w*3,q);
             p0+=3;
-            c+=3;
             q+=3;
         }
     }
@@ -296,6 +306,7 @@ void glut_keyboard(unsigned char key, int x, int y){
             mode=MODE_WALK_AROUND;
             wa_theta=0;
             g_angle3=-3.14/2;
+            pos_z = 500;
             break;
         case 'o'://周回モード
             mode=MODE_REPLAY;
@@ -326,28 +337,31 @@ void glut_idle(){
     }
 }
 void glut_display(){
+    glClearColor(63.0/255,166.0/255,250.0/255,1.0);
+    glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    gluPerspective(50.0, 1.5, 0.1, 10000);
+    gluPerspective(40.0, 1.5, 0.1, 10000);
 
 
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-    gluLookAt(pos_x,pos_y,pos_z,
+    if(mode==MODE_WALK_AROUND){
+          gluLookAt(pos_x,pos_y,pos_z,
+                 gsx_center[0],gsx_center[1],gsx_center[2],
+                 0,0,1);
+    }else{
+        gluLookAt(pos_x,pos_y,pos_z,
             pos_x+h * sin(g_angle3+wa_theta), 
 	        pos_y+h * cos(g_angle3+wa_theta),
 	        0, 
             0.0, 0.0, 1.0);
-    // gluLookAt(w/2,h/2,h*3,
-    //             w/2,h/2,0,
-    //             0,1,0);
+    }
     
     GLfloat lightpos[] = {((float)w/2)*(1-cos(angle)),((float)h)*(1-sin(angle)),1000,1.0};
 
     GLfloat diffuse[] = {1.0, 1.0, 1.0, 1.0};
     GLfloat ambient[] = {1.0, 1.0, 1.0, 1.0};
-    glClearColor(63.0/255,166.0/255,250.0/255,1.0);
-    glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
     glEnable(GL_LIGHTING);
     glEnable(GL_LIGHT0);
     glEnable(GL_DEPTH_TEST);
@@ -356,10 +370,9 @@ void glut_display(){
     glLightfv(GL_LIGHT0,GL_AMBIENT,ambient);
     draw_map();
     draw_gsx();
-    draw_polls();
-    glFlush();
-    glDisable(GL_LIGHT0);
     glDisable(GL_LIGHTING);
+    draw_polls();
+    glDisable(GL_LIGHT0);
     glDisable(GL_DEPTH_TEST);
     
     glutSwapBuffers();
@@ -371,12 +384,32 @@ void draw_map(){
     glEnableClientState(GL_COLOR_ARRAY);
     glMaterialfv(GL_FRONT,GL_DIFFUSE,green_dif);
     glMaterialfv(GL_FRONT,GL_AMBIENT,green_amb);
-    glDrawElements(GL_QUADS,(w-1)*(h-1)*4,GL_UNSIGNED_INT,indices);
+    int d=5;
+    int i,j;
+    //視点のいるメッシュ
+    int m_x=pos_x/MESH_NUM;
+    int m_y=((int)(h-pos_y))/MESH_NUM;
+    int temp;
+    //glDrawElements(GL_QUADS,(w-1)*(h-1)*4/(d*d),GL_UNSIGNED_INT,indices[d-1]);   
+
+    for(i=0;i<w/MESH_NUM;i++){
+        for(j=0;j<h/MESH_NUM;j++){
+            //解像度の決定
+            d = sqrt((m_x-i)*(m_x-i)+(m_y-j)*(m_y-j));
+            d=d/2;
+            if(d>INDICE_NUM)d=INDICE_NUM;
+            if(d<1)d=1;
+            //投げる
+            temp=(MESH_NUM/d)*2;
+            temp=temp*temp;
+            glDrawElements(GL_QUADS,temp,GL_UNSIGNED_INT,indices[d-1]+temp*(j+(h/MESH_NUM)*i));   
+        }
+    }
     glDisableClientState(GL_NORMAL_ARRAY);
     glDisableClientState(GL_VERTEX_ARRAY);
     glDisableClientState(GL_COLOR_ARRAY);
     
-    glMaterialfv(GL_FRONT,GL_DIFFUSE,sea_color);
+    glMaterialfv(GL_FRONT,GL_DIFFUSE,green_dif);
     glBegin(GL_QUADS);
     int sea_level=0;
     glNormal3d(0,0,1);
@@ -409,10 +442,12 @@ void draw_polls(){
 }
 void draw_poll(float* x,float* color,string str){
     glMaterialfv(GL_FRONT,GL_DIFFUSE,color);
+    glColor3f(1,0,0);
     glBegin(GL_LINE_STRIP);
     glVertex3f(x[0],x[1],x[2]);
     glVertex3f(x[0],x[1],x[2]+50);
     glEnd();
+    glColor3f(1,1,1);
     glRasterPos3f(x[0],x[1],x[2]+50);
     for(int i = 0;i<str.size();i++){
         glutBitmapCharacter(GLUT_BITMAP_9_BY_15,str[i]);
