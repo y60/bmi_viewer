@@ -30,7 +30,7 @@ void convertLatLon(float lat, float lon, float* xyz);
 GLfloat green_dif[] ={88.0/255,181.0/255,64/255,1.0};
 GLfloat green_amb[] ={30.0/255,33.0/255,19.0/255,1.0};
 GLfloat red_line[] ={1,0,0,1.0};
-
+GLfloat sea_color[]={0.0,0.0,1.0};
 int gsx_size;
 int poll_size;
 double lat;
@@ -329,7 +329,16 @@ void draw_map(){
     glDisableClientState(GL_NORMAL_ARRAY);
     glDisableClientState(GL_VERTEX_ARRAY);
     glDisableClientState(GL_COLOR_ARRAY);
-    printf("rendered.\n");
+    
+    glMaterialfv(GL_FRONT,GL_DIFFUSE,sea_color);
+    glBegin(GL_QUADS);
+    int sea_level=0;
+    glNormal3d(0,0,1);
+    glVertex3f(0,0,sea_level);
+    glVertex3f(w,0,sea_level);
+    glVertex3f(w,h,sea_level);
+    glVertex3f(0,h,sea_level);
+    glEnd();
 }
 void draw_gsx(){
     glMaterialfv(GL_FRONT,GL_DIFFUSE,red_line);
