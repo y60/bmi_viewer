@@ -312,14 +312,16 @@ void glut_keyboard(unsigned char key, int x, int y){
         break;
         case 'u'://default
             mode=MODE_DEFAULT;
+            wa_theta=0;
+            pos_z=gsx_data[2]+100;
             break;
         case 'i'://周回モード
             mode=MODE_WALK_AROUND;
             wa_theta=0;
             g_angle3=-3.14/2;
             pos_z = 500;
-            break;
-        case 'o'://周回モード
+            return;
+        case 'o':
             mode=MODE_REPLAY;
             break;
     }
@@ -331,7 +333,7 @@ void glut_motion(int x, int y){
     if(px >= 0 && py >= 0){
         g_angle1 += (double)-(x - px)/20;
         g_angle2 += (double)(y - py)/20;
-        pos_z += (double)(y - py);
+        if(abs(y-py)<10)pos_z += (double)(y - py);
     }
     px = x;
     py = y;
@@ -358,7 +360,7 @@ void glut_display(){
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
     if(mode==MODE_WALK_AROUND){
-          gluLookAt(pos_x,pos_y,pos_z,
+        gluLookAt(pos_x,pos_y,pos_z,
                  gsx_center[0],gsx_center[1],gsx_center[2],
                  0,0,1);
     }else{
