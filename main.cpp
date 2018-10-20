@@ -149,17 +149,20 @@ void load_poll_csv(char* file){
     poll_name_data = (string *)malloc(sizeof(string)*poll_size);
     float *p=poll_data;
     int count=0;
+    char* temp = (char *)malloc(sizeof(char)*20);
     while (getline(ifs, buf,',')&&count<poll_size) {
         float mlat=stof(buf);
         getline(ifs, buf,',');
         float mlon=stof(buf);
         getline(ifs, buf,'\n');
-        printf("%s\n",buf);
-        buf.copy(poll_name_data[count],buf.size());
+        printf("%s\n",temp);
+        buf.copy(temp,buf.size());
+        poll_name_data[count]=string(temp,buf.size());
         convertLatLon(mlat,mlon,p);
         p+=3;
         count++;
     }
+    free(temp);
     printf("poll loaded.\n");
 }
 
@@ -347,6 +350,7 @@ void draw_map(){
 }
 void draw_gsx(){
     glMaterialfv(GL_FRONT,GL_DIFFUSE,red_line);
+    glLineWidth(4);
     glBegin(GL_LINE_STRIP);
     float *p=gsx_data;
     for(int i=0;i<gsx_size;i++){
@@ -357,6 +361,7 @@ void draw_gsx(){
 }
 
 void draw_polls(){
+    glLineWidth(1);
     draw_poll(gsx_data,red_line,"Start");
     draw_poll(gsx_data+(gsx_size-1)*3,red_line,"Goal");
     for (int i = 0;i<poll_size;i++){
@@ -367,9 +372,9 @@ void draw_poll(float* x,float* color,string str){
     glMaterialfv(GL_FRONT,GL_DIFFUSE,color);
     glBegin(GL_LINE_STRIP);
     glVertex3f(x[0],x[1],x[2]);
-    glVertex3f(x[0],x[1],pos_z+1);
+    glVertex3f(x[0],x[1],x[2]+50);
     glEnd();
-    glRasterPos3f(x[0],x[1],pos_z);
+    glRasterPos3f(x[0],x[1],x[2]+50);
     for(int i = 0;i<str.size();i++){
         glutBitmapCharacter(GLUT_BITMAP_9_BY_15,str[i]);
     }
