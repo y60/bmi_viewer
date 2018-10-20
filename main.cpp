@@ -9,6 +9,9 @@ using namespace std;
 #define WINDOW_X (900)
 #define WINDOW_Y (600)
 #define WINDOW_NAME "Viewer"
+#define MODE_DEFAULT 0
+#define MODE_WALK_AROUND 1
+#define MODE_REPLAY 2
 
 int load_csv(char* file);
 void load_gsx_csv(char* file);
@@ -17,6 +20,7 @@ void init_GL(int argc, char *argv[]);
 void set_callback_functions();
 void draw_map();
 void glut_display();
+void glut_idle();
 void glut_keyboard(unsigned char key, int x, int y);
 void prepare_polygon();
 void closs(float* x1,float* x2,float* y1,float* y2, float* closs);//x2-x1とy2-y1の外積を計算して正規化してclossに入れる
@@ -35,6 +39,7 @@ int gsx_size;
 int poll_size;
 double lat;
 double lon;
+double wa_theta=0;
 double g_angle1 = 0.0;
 double g_angle3 = 0.0;//視点の向き
 double pos_x;
@@ -42,6 +47,8 @@ double pos_y;
 double pos_z=0;
 double v=3.0;
 double g_angle2 = -3.141592 / 6;
+float gsx_center[]={0,0,0};
+int mode = MODE_DEFAULT;
 int w,h;
 GLfloat* gsx_data;
 GLfloat* csv_data;
@@ -89,17 +96,17 @@ int load_csv(char* file){
         br=buf.find('\n');
         if(br==string::npos){
             if(x<w&&y<h){
-            csv_data[i]=x;
-            csv_data[i+1]=h-y;
-            csv_data[i+2]=(stof(buf)/10);
+                csv_data[i]=x;
+                csv_data[i+1]=h-y;
+                csv_data[i+2]=(stof(buf)/10);                
                 i+=3;
             }
         }else{
             if(x<w&&y<h){
-            csv_data[i]=x;
-            csv_data[i+1]=h-y;
-            csv_data[i+2]=(stof(buf.substr(0,br))/10);
-            i+=3;
+                csv_data[i]=x;
+                csv_data[i+1]=h-y;
+                csv_data[i+2]=(stof(buf.substr(0,br))/10);
+                i+=3;
             }
             if(br==buf.size()-1)return i;
             x=0;
@@ -133,6 +140,16 @@ void load_gsx_csv(char* file){
         p+=3;
         count++;
     }
+
+    for(int i = 0;i<count;i++){
+        for(int j = 0;j<3;j++){
+            gsx_center[j]+=gsx_data[3*i+j];
+        }      
+    }
+    for(int j = 0;j<3;j++){
+        gsx_center[j]/=count;
+    }      
+
     pos_x=gsx_data[0];
     pos_y=gsx_data[1];
     pos_z=gsx_data[2]+100;
@@ -245,6 +262,7 @@ void set_callback_functions(){
     glutDisplayFunc(glut_display);
     glutKeyboardFunc(glut_keyboard);
     glutMotionFunc(glut_motion);
+    glutIdleFunc(glut_idle);
 }
 
 float angle=0;
@@ -271,6 +289,17 @@ void glut_keyboard(unsigned char key, int x, int y){
             pos_x-= v*sin(g_angle3); 
 	        pos_y-= v*cos(g_angle3);
         break;
+        case 'u'://default
+            mode=MODE_DEFAULT;
+            break;
+        case 'i'://周回モード
+            mode=MODE_WALK_AROUND;
+            wa_theta=0;
+            g_angle3=-3.14/2;
+            break;
+        case 'o'://周回モード
+            mode=MODE_REPLAY;
+            break;
     }
     glutPostRedisplay();
 }
@@ -287,17 +316,26 @@ void glut_motion(int x, int y){
     glutPostRedisplay();
 }
 
+void glut_idle(){
+    if(mode==MODE_WALK_AROUND){
+        pos_x = gsx_center[0]+h/2*cos(wa_theta);
+        pos_y = gsx_center[1]+h/2*sin(wa_theta);
+        wa_theta+=0.01;
+        g_angle3-=0.02;
+        glutPostRedisplay();     
+    }
+}
 void glut_display(){
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    gluPerspective(30.0, 1.5, 0.1, 10000);
+    gluPerspective(50.0, 1.5, 0.1, 10000);
 
 
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
     gluLookAt(pos_x,pos_y,pos_z,
-            pos_x+h * sin(g_angle3), 
-	        pos_y+h * cos(g_angle3),
+            pos_x+h * sin(g_angle3+wa_theta), 
+	        pos_y+h * cos(g_angle3+wa_theta),
 	        0, 
             0.0, 0.0, 1.0);
     // gluLookAt(w/2,h/2,h*3,
@@ -364,6 +402,7 @@ void draw_polls(){
     glLineWidth(1);
     draw_poll(gsx_data,red_line,"Start");
     draw_poll(gsx_data+(gsx_size-1)*3,red_line,"Goal");
+    //draw_poll(gsx_center,red_line,"center");
     for (int i = 0;i<poll_size;i++){
       draw_poll(poll_data+i*3,red_line,poll_name_data[i]);
     }
