@@ -60,15 +60,27 @@ GLuint* indices[INDICE_NUM];
 GLfloat* normals;
 
 int main(int argc, char* argv[]){
+    char *csv_file,*gsx_file,*pole_file;
     //読み込み
-    h=stoi(argv[2])/MESH_NUM*MESH_NUM+1;
-    w=stoi(argv[3])/MESH_NUM*MESH_NUM+1;
-    int size = load_csv(argv[1]);
-    load_gsx_csv(argv[4]);
-    load_poll_csv(argv[5]);
+    if(argc<6){
+        h=1500/MESH_NUM*MESH_NUM+1;
+        w=3375/MESH_NUM*MESH_NUM+1;
+        csv_file=(char*)"tanzawa.csv";
+        gsx_file=(char*)"tanzawa_gsx.csv";
+        pole_file=(char*)"tanzawa_pole.csv";
+    }else{
+        h=stoi(argv[2])/MESH_NUM*MESH_NUM+1;
+        w=stoi(argv[3])/MESH_NUM*MESH_NUM+1;
+        csv_file=argv[1];
+        gsx_file=argv[4];
+        pole_file=argv[5];
+    }
+    int size = load_csv(csv_file);
+    load_gsx_csv(gsx_file);
+    load_poll_csv(pole_file);
     pos_x=w/2;
     pos_y=h/2;
-    printf("%d*%d map %s loaded.\n",w,h,argv[1]);
+    printf("%d*%d map %s loaded.\n",w,h,csv_file);
 
     init_GL(argc,argv);
 
