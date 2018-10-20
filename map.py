@@ -13,6 +13,7 @@ class Grid:
         if len(file) == 0:
             print(path," is not found")
             self.tupleList = np.zeros((750,1125))
+            self.topLeftLatLong=[0,0]
             return
         tree = ET.parse(file[0])
         self.root = tree.getroot()    
@@ -45,25 +46,29 @@ class Mesh:
     def __init__(self,path,n):
         a=[]
         folder = path+'/'+self.__generateFolderName(n)
-        self.tupleList=Grid(folder,n,0).tupleList
+        grid=Grid(folder,n,0)
+        self.tupleList=grid.tupleList
+        self.topLeftLatLong=grid.topLeftLatLong
 #         for i in range(10):
 #             b=[]
 #             for j in range(10):
 #                 b.append(Grid(folder,n,(9-i)*10+j).tupleList)
 #             a.append(b)
 #         self.tupleList=np.block(a)
-        
+       
     def __generateFolderName(self,n):
         return 'FG-GML-{}-{:02}-DEM10B'.format(n//100,n%100)
 def process(arg):
-    return Mesh(arg[0],arg[1]).tupleList   
+    return Mesh(arg[0],arg[1])   
 class Map:
     def __init__(self,folder,nums):
         h = len(nums)
         w = len(nums[0])
         a=[]
-        p = Pool(multi.cpu_count())
+        p = Pool(multi.cpu_count())  
         for i in range(h):
             b=p.map(process, list(map(lambda x: [folder,x] ,nums[i])))
-            a.append(b)      
+            a.append(list(map(lambda x: x.tupleList ,b)))
+            if i ==0:
+                self.topLeftLatLong=b[0].topLeftLatLong 
         self.tupleList=np.block(a)
